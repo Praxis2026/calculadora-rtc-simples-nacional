@@ -1,23 +1,21 @@
 # Imagem do motor Simples Nacional (RFB) para rodar no Easypanel.
 # O banco SQLite vem do Flyway do repositorio Regime Regular (mesma release dos dois motores).
-# API na porta 8082, context-path /api.
+# API na porta 8082, context-path /api. Java 25 / Spring Boot 4. Usa o Maven da imagem, sem o mvnw.
 
-# Estagio 1: gera o banco com o Flyway do Regime Regular (Java 21)
-FROM eclipse-temurin:21-jdk AS db
+# Estagio 1: gera o banco com o Flyway do Regime Regular
+FROM maven:3.9-eclipse-temurin-25 AS db
 ARG REGIME_REPO=https://github.com/ReceitaFederal/calculadora-rtc-regime-regular.git
 ARG REGIME_REF=1.7.2
-RUN apt-get update && apt-get install -y --no-install-recommends git \
- && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch ${REGIME_REF} ${REGIME_REPO} /regime
 WORKDIR /regime
-RUN git clone --depth 1 --branch ${REGIME_REF} ${REGIME_REPO} .
-RUN chmod +x mvnw && mkdir -p calculadora/db \
- && ./mvnw -B -q flyway:migrate -Dflyway.configFiles=flyway/flyway-pro.conf
+RUN mkdir -p calculadora/db \
+ && mvn -B -q flyway:migrate -Dflyway.configFiles=flyway/flyway-pro.conf
 
-# Estagio 2: compila o Simples Nacional (Java 25)
-FROM eclipse-temurin:25-jdk AS build
+# Estagio 2: compila o Simples Nacional
+FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /app
 COPY . .
-RUN chmod +x mvnw && ./mvnw -B -q clean package -DskipTests
+RUN mvn -B -q clean package -DskipTests
 
 # Estagio 3: imagem final
 FROM eclipse-temurin:25-jre
