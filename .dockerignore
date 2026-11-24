@@ -1,0 +1,6 @@
+.git
+.github
+target
+calculadora/db/*.db
+*.md
+docs
